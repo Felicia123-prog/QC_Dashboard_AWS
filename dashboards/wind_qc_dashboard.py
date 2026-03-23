@@ -17,35 +17,31 @@ station_path = os.path.join(data_path, station)
 wind_file = "Wind_Dir_Averagedeg_QC.xlsx"
 file_path = os.path.join(station_path, wind_file)
 
-if not os.path.exists(file_path):
-    st.error(f"❌ Bestand niet gevonden: {file_path}")
-    st.stop()
-
 df = pd.read_excel(file_path)
 
 # ---------------------------------------------------------
-# ⭐ 1. Kolomnamen opschonen (BELANGRIJK!)
+# ⭐ 1. Kolomnamen opschonen
 # ---------------------------------------------------------
 df.columns = df.columns.str.strip()
 
 # ---------------------------------------------------------
-# ⭐ 2. RAW VALUE + CLEANED VALUE FIX
+# ⭐ 2. Tijd fixen (DIT IS DE BELANGRIJKSTE FIX)
+# ---------------------------------------------------------
+df["Dag"] = df["Dag"].astype(str).str.strip()
+df["Tijd"] = df["Tijd"].astype(str).str.strip().str.slice(-8)
+
+# ---------------------------------------------------------
+# ⭐ 3. Timestamp bouwen (nu 100% correct)
+# ---------------------------------------------------------
+df["Timestamp"] = pd.to_datetime(df["Dag"] + " " + df["Tijd"], errors="coerce")
+df = df.sort_values("Timestamp")
+
+# ---------------------------------------------------------
+# ⭐ 4. Raw Value fix
 # ---------------------------------------------------------
 df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 df["Cleaned Value"] = pd.to_numeric(df["Cleaned Value"], errors="coerce")
-
-# Als Raw ontbreekt maar Cleaned bestaat → gebruik Cleaned
 df["Raw Value"] = df["Raw Value"].fillna(df["Cleaned Value"])
-
-# ---------------------------------------------------------
-# ⭐ 3. TIMESTAMP – DE ENIGE JUISTE MANIER
-# ---------------------------------------------------------
-df["Dag"] = df["Dag"].astype(str).str.strip()
-df["Tijd"] = df["Tijd"].astype(str).str.strip()
-
-df["Timestamp"] = pd.to_datetime(df["Dag"] + " " + df["Tijd"], errors="coerce")
-
-df = df.sort_values("Timestamp")
 
 # 📅 Dagselectie
 alle_dagen = sorted(df["Timestamp"].dt.date.unique())
@@ -56,7 +52,7 @@ df_dag = df[df["Timestamp"].dt.date == gekozen_dag]
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
 # ---------------------------------------------------------
-# ⭐ 4. MISSING BLOCKS – NU 100% IDENTIEK AAN TEMPERATUUR
+# ⭐ 5. MISSING BLOCKS – IDENTIEK AAN TEMPERATUUR
 # ---------------------------------------------------------
 st.subheader("Ontbrekende metingen voor de dag!")
 
@@ -129,7 +125,7 @@ st.plotly_chart(fig, use_container_width=True)
 st.markdown("**Legenda:** 🟩 Ontvangen meting   |   🟥 Ontbrekende meting**")
 
 # ---------------------------------------------------------
-# ⭐ 5. QC SAMENVATTING – DAG
+# ⭐ 6. QC SAMENVATTING – DAG
 # ---------------------------------------------------------
 st.subheader("QC")
 
@@ -161,7 +157,7 @@ qc_html = f"""
 st.markdown(qc_html, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# ⭐ 6. MAANDOVERZICHT QC
+# ⭐ 7. MAANDOVERZICHT QC
 # ---------------------------------------------------------
 st.subheader("Maandelijkse QC – Windrichting")
 
@@ -218,7 +214,7 @@ st.plotly_chart(fig2, use_container_width=True)
 st.markdown("**Legenda:** 🟩 Geschikte dag   |   🟥 Ongeschikte dag**")
 
 # ---------------------------------------------------------
-# ⭐ 7. GEREGISTREERDE METINGEN & QC
+# ⭐ 8. GEREGISTREERDE METINGEN & QC
 # ---------------------------------------------------------
 st.subheader("Geregistreerde Windrichtingmetingen & Datakwaliteit")
 
@@ -253,7 +249,7 @@ st.markdown("""
 """)
 
 # ---------------------------------------------------------
-# ⭐ 8. WINDROOS – DAG
+# ⭐ 9. WINDROOS – DAG
 # ---------------------------------------------------------
 st.subheader("Windroos – Dag")
 
@@ -288,7 +284,7 @@ fig_w.update_layout(
 st.plotly_chart(fig_w, use_container_width=True)
 
 # ---------------------------------------------------------
-# ⭐ 9. DAGCONCLUSIE
+# ⭐ 10. DAGCONCLUSIE
 # ---------------------------------------------------------
 outliers = (df_dag["QC_Flag"] == "OUT_OF_RANGE").sum()
 
@@ -298,7 +294,7 @@ else:
     st.markdown("### Dagconclusie\n✔️ Alle waarden geldig.")
 
 # ---------------------------------------------------------
-# ⭐ 10. MAANDSTATISTIEKEN
+# ⭐ 11. MAANDSTATISTIEKEN
 # ---------------------------------------------------------
 st.subheader("Maandstatistieken – Windrichting")
 
@@ -322,7 +318,7 @@ else:
     st.markdown("### Maandconclusie\n✔️ Alle waarden geldig.")
 
 # ---------------------------------------------------------
-# ⭐ 11. WINDROOS – MAAND
+# ⭐ 12. WINDROOS – MAAND
 # ---------------------------------------------------------
 st.subheader("Maandelijkse Windroos")
 
