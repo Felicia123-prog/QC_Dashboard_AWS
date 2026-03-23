@@ -38,11 +38,13 @@ df["Cleaned Value"] = pd.to_numeric(df["Cleaned Value"], errors="coerce")
 df["Raw Value"] = df["Raw Value"].fillna(df["Cleaned Value"])
 
 # ---------------------------------------------------------
-# ⭐ 3. TIMESTAMP – GEEN AFRONDING, GEEN FLOOR, GEEN ROUND
+# ⭐ 3. TIMESTAMP – DE ENIGE JUISTE MANIER
 # ---------------------------------------------------------
-df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str))
+df["Dag"] = df["Dag"].astype(str).str.strip()
+df["Tijd"] = df["Tijd"].astype(str).str.strip()
 
-# Data is al perfect 10-minuten → NIETS aanpassen
+df["Timestamp"] = pd.to_datetime(df["Dag"] + " " + df["Tijd"], errors="coerce")
+
 df = df.sort_values("Timestamp")
 
 # 📅 Dagselectie
@@ -54,7 +56,7 @@ df_dag = df[df["Timestamp"].dt.date == gekozen_dag]
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
 # ---------------------------------------------------------
-# ⭐ 4. MISSING BLOCKS – NU 100% CORRECT
+# ⭐ 4. MISSING BLOCKS – NU 100% IDENTIEK AAN TEMPERATUUR
 # ---------------------------------------------------------
 st.subheader("Ontbrekende metingen voor de dag!")
 
