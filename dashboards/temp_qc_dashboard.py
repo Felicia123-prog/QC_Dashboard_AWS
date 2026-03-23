@@ -6,17 +6,13 @@ import plotly.express as px
 
 st.title("AWS QC Dashboard – Temperatuur (Raw Value)")
 
-# ---------------------------------------------------------
-# 📁 1. Detecteer stations in data/processed/
-# ---------------------------------------------------------
-data_path = "data/processed"
+# 📁 Detecteer stations
+data_path = "data"
 stations = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, d))]
 
 station = st.selectbox("Kies een station", stations)
 
-# ---------------------------------------------------------
-# 📄 2. Automatisch temperatuur-QC-bestand kiezen
-# ---------------------------------------------------------
+# 📄 Automatisch temperatuur-bestand kiezen
 station_path = os.path.join(data_path, station)
 temp_file = "Air_Temperaturedeg_C_QC.xlsx"
 file_path = os.path.join(station_path, temp_file)
@@ -27,9 +23,7 @@ df = pd.read_excel(file_path)
 df['Timestamp'] = pd.to_datetime(df['Dag'].astype(str) + ' ' + df['Tijd'].astype(str))
 df = df.sort_values('Timestamp')
 
-# ---------------------------------------------------------
-# 📅 3. Dagselectie
-# ---------------------------------------------------------
+# 📅 Dagselectie
 alle_dagen = sorted(df['Timestamp'].dt.date.unique())
 gekozen_dag = st.selectbox("Kies een dag", alle_dagen)
 
@@ -37,9 +31,9 @@ df_dag = df[df['Timestamp'].dt.date == gekozen_dag]
 
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
-# ---------------------------------------------------------
-# ⭐ 4. CUSTOM BLOCKS TIMELINE (Ontbrekende metingen)
-# ---------------------------------------------------------
+# -----------------------------
+# 1. CUSTOM BLOCKS TIMELINE
+# -----------------------------
 st.subheader("Ontbrekende metingen voor de dag!")
 
 df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
@@ -87,20 +81,24 @@ for _, row in df_expected.iterrows():
 
 fig.update_xaxes(
     title_text="<b>Uur van de dag</b>",
+    title_font=dict(size=16),
+    tickfont=dict(size=14, color="black"),
+    range=[0, cols * (cell_size + gap)],
     tickmode="array",
     tickvals=[h * (cell_size + gap) + cell_size/2 for h in range(cols)],
     ticktext=[f"<b>{h:02d}:00</b>" for h in range(cols)],
-    range=[0, cols * (cell_size + gap)],
     showgrid=False,
     zeroline=False
 )
 
 fig.update_yaxes(
     title_text="<b>10-minuten blok</b>",
+    title_font=dict(size=16),
+    tickfont=dict(size=14, color="black"),
+    range=[0, rows * (cell_size + gap)],
     tickmode="array",
     tickvals=[i * (cell_size + gap) + cell_size/2 for i in range(rows)],
     ticktext=[f"<b>{t}</b>" for t in ["00", "10", "20", "30", "40", "50"]],
-    range=[0, rows * (cell_size + gap)],
     showgrid=False,
     zeroline=False
 )
@@ -116,9 +114,11 @@ st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("**Legenda:** 🟩 Ontvangen meting   |   🟥 Ontbrekende meting")
 
-# ---------------------------------------------------------
-# ⭐ 5. QC SAMENVATTING
-# ---------------------------------------------------------
+# -----------------------------
+# 2. QC SAMENVATTING
+# -----------------------------
+st.subheader("QC")
+
 totaal_blokken = 144
 aanwezig = df_expected["Status"].sum()
 ontbrekend = totaal_blokken - aanwezig
@@ -150,8 +150,9 @@ qc_html = f"""
 st.markdown(qc_html, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# ⭐ 6. MAANDOVERZICHT QC
+# 3. MAANDOVERZICHT QC – TEMPERATUUR
 # ---------------------------------------------------------
+
 st.subheader("Maandelijkse QC – Temperatuur")
 
 alle_dagen = sorted(df['Timestamp'].dt.date.unique())
@@ -174,11 +175,13 @@ for dag in alle_dagen:
 qc_df = pd.DataFrame(qc_resultaten)
 
 fig2 = go.Figure()
+
 cell_size = 40
 gap = 10
 
 for i, row in qc_df.iterrows():
     kleur = "green" if row["Status"] == "goed" else "red"
+
     x0 = i * (cell_size + gap)
     x1 = x0 + cell_size
 
@@ -204,13 +207,7 @@ fig2.update_layout(height=150, plot_bgcolor="white")
 
 st.plotly_chart(fig2, use_container_width=True)
 
-st.markdown("**Legenda:** 🟩 Geschikte dag (≥75%)   |   🟥 Ongeschikte dag (<75%)")
-
-# ---------------------------------------------------------
-# ⭐ 7. SAMENVATTING MAAND
-# ---------------------------------------------------------
-goede_dagen = (qc_df["Status"] == "goed").sum()
-slechte_dagen = (qc_df["Status"] == "slecht").sum()
+st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongeschikte dag (<75% compleet)")
 
 eerste_dag = alle_dagen[0]
 maand = eerste_dag.month
@@ -229,16 +226,18 @@ ontbrekende_dagen = totaal_dagen_in_maand - dagen_met_data
 
 st.markdown(f"""
 ### Samenvatting maand
-- **Geschikte dagen:** {goede_dagen}  
-- **Ongeschikte dagen:** {slechte_dagen}  
-- **Aantal dagen met data:** {dagen_met_data} van {totaal_dagen_in_maand}  
+- **Geschikte dagen (≥75% compleet):** {goede_dagen}  
+- **Ongeschikte dagen (<75% compleet):** {slechte_dagen}  
+- **Aantal dagen met data:** {dagen_met_data} van de {totaal_dagen_in_maand}  
 - **Ontbrekende dagen:** {ontbrekende_dagen}  
 """)
 
 # ---------------------------------------------------------
-# ⭐ 8. DAGELIJKSE TEMPERATUURMETINGEN + QC
+# 4. GEREGISTREERDE TEMPERATUURMETINGEN & DATAKWALITEIT
 # ---------------------------------------------------------
+
 st.subheader("Geregistreerde Temperatuurmetingen & Datakwaliteit")
+st.caption("We kijken naar de werkelijke gemeten data én de kwaliteit ervan.")
 
 df["Tijd"] = df["Tijd"].astype(str).str.strip()
 df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str), errors="coerce")
@@ -255,8 +254,9 @@ df_dag = df_dag.sort_values("Timestamp")
 df_dag["Raw Value"] = df_dag["Raw Value"].round(1)
 
 # ---------------------------------------------------------
-# ⭐ 9. QC INTERVALLEN – SURINAME SPECIFIEK
+# ⭐ 7. QC INTERVALLEN – SURINAME SPECIFIEK
 # ---------------------------------------------------------
+
 df_dag["QC_Flag"] = "OK"
 
 df_dag.loc[df_dag["Raw Value"] < 0, "QC_Flag"] = "LOW_IMPOSSIBLE"
@@ -266,8 +266,9 @@ df_dag.loc[(df_dag["Raw Value"] >= 37) & (df_dag["Raw Value"] <= 40), "QC_Flag"]
 df_dag.loc[df_dag["Raw Value"] > 40, "QC_Flag"] = "VERY_HIGH"
 
 # ---------------------------------------------------------
-# ⭐ 10. TABEL MET KLEURCODES
+# 8. Tabel tonen – MET HIGHLIGHTING
 # ---------------------------------------------------------
+
 def highlight_qc(val):
     colors = {
         "OK": "background-color: #b6f2b6",
@@ -287,6 +288,10 @@ st.dataframe(
     .format({"Raw Value": "{:.1f}"})
 )
 
+# ---------------------------------------------------------
+# ⭐ LEGENDA – ONDER DE TABEL
+# ---------------------------------------------------------
+
 st.markdown("""
 ### Legenda datakwaliteit
 - 🟩 **OK** — Normale waarden (20–37°C)  
@@ -298,8 +303,9 @@ st.markdown("""
 """)
 
 # ---------------------------------------------------------
-# ⭐ 11. GRAFIEK MET QC-KLEUREN
+# 9. Grafiek tonen – MET QC-KLEUREN
 # ---------------------------------------------------------
+
 fig = px.line(
     df_dag,
     x="Timestamp",
@@ -323,8 +329,9 @@ fig.update_xaxes(title_text="Tijd")
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------------------------------------
-# ⭐ 12. QC SAMENVATTING – DAG
+# ⭐ 10. QC SAMENVATTING – ONDER DE GRAFIEK
 # ---------------------------------------------------------
+
 laagste = df_dag["Raw Value"].min()
 hoogste = df_dag["Raw Value"].max()
 qc_counts = df_dag["QC_Flag"].value_counts()
@@ -351,8 +358,9 @@ else:
 st.markdown(f"### Dagconclusie\n{conclusie}")
 
 # ---------------------------------------------------------
-# ⭐ 13. MAANDSTATISTIEKEN
+# ⭐ 11. MAANDSTATISTIEKEN – AUTOMATISCH OP BASIS VAN GEKOZEN DAG
 # ---------------------------------------------------------
+
 maand = gekozen_dag.month
 jaar = gekozen_dag.year
 
@@ -382,6 +390,10 @@ if not df_maand.empty:
     - **Hoogste waarde in de maand:** {hoogste_maand}°C  
     """)
 
+    # ---------------------------------------------------------
+    # ⭐ 12. MAAND-CONCLUSIE – GESCHIKTHEID VAN HET STATION
+    # ---------------------------------------------------------
+
     problemen = []
 
     if negatieve_percentage >= 50:
@@ -389,6 +401,7 @@ if not df_maand.empty:
             "❌ Meer dan 50% van de maandwaarden is negatief. "
             "De data is NIET geschikt voor analyse."
         )
+
     else:
         if negatieve_count > 0:
             problemen.append(
@@ -397,21 +410,40 @@ if not df_maand.empty:
             )
 
         if laagste_maand is not None and laagste_maand > 30:
-            problemen.append("De laagste geldige waarde ligt boven 30°C, wat onrealistisch is voor Suriname.")
-        elif laagste_maand is not None and laagste_maand < 5:
-            problemen.append("De laagste geldige waarde ligt onder 5°C, wat fysiek onmogelijk is.")
+            problemen.append(
+                "De laagste geldige waarde ligt boven 30°C, wat onrealistisch is voor Suriname."
+            )
+
+        if laagste_maand is not None and laagste_maand < 5:
+            problemen.append(
+                "De laagste geldige waarde ligt onder 5°C, wat fysiek onmogelijk is."
+            )
         elif laagste_maand is not None and laagste_maand < 10:
-            problemen.append("De laagste geldige waarde ligt onder 10°C, wat zeer onrealistisch is.")
+            problemen.append(
+                "De laagste geldige waarde ligt onder 10°C, wat zeer onrealistisch is."
+            )
         elif laagste_maand is not None and laagste_maand < 20:
-            problemen.append("De laagste geldige waarde ligt onder 20°C, wat niet typisch is voor Suriname.")
+            problemen.append(
+                "De laagste geldige waarde ligt onder 20°C, wat niet typisch is voor Suriname."
+            )
 
         if hoogste_maand > 45:
-            problemen.append("De maand bevat waarden boven 45°C, wat fysiek onmogelijk is.")
+            problemen.append(
+                "De maand bevat waarden boven 45°C, wat fysiek onmogelijk is."
+            )
         elif hoogste_maand > 40:
-            problemen.append("De maand bevat extreem hoge waarden (>40°C).")
+            problemen.append(
+                "De maand bevat extreem hoge waarden (>40°C)."
+            )
         elif hoogste_maand > 37:
-            problemen.append("De maand bevat zeer hoge waarden (>37°C).")
+            problemen.append(
+                "De maand bevat zeer hoge waarden (>37°C)."
+            )
 
         if problemen:
             maand_conclusie = (
-                "⚠️ De data bevat aandachtspunten. Gebruik de data alleen na filtering
+                "⚠️ De data bevat aandachtspunten. Gebruik de data alleen na filtering en controle.\n\n"
+                + "\n".join(f"- {p}" for p in problemen)
+            )
+        else:
+            maand_conclusie
