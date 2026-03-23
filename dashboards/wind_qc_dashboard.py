@@ -23,6 +23,15 @@ if not os.path.exists(file_path):
 
 df = pd.read_excel(file_path)
 
+# ---------------------------------------------------------
+# ⭐ RAW VALUE + CLEANED VALUE FIX
+# ---------------------------------------------------------
+df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
+df["Cleaned Value"] = pd.to_numeric(df["Cleaned Value"], errors="coerce")
+
+# Als Raw ontbreekt maar Cleaned bestaat → gebruik Cleaned
+df["Raw Value"] = df["Raw Value"].fillna(df["Cleaned Value"])
+
 # Combineer Dag + Tijd
 df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str))
 df = df.sort_values("Timestamp")
@@ -39,8 +48,6 @@ st.subheader(f"QC Rapport – {gekozen_dag}")
 # 1. CUSTOM BLOCKS TIMELINE – MISSING DETECTIE
 # ---------------------------------------------------------
 st.subheader("Ontbrekende metingen voor de dag!")
-
-df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 
 df_dag = df[df["Timestamp"].dt.date == gekozen_dag].copy()
 
@@ -153,7 +160,6 @@ qc_resultaten = []
 
 for dag in alle_dagen:
     df_dag = df[df["Timestamp"].dt.date == dag].copy()
-    df_dag["Raw Value"] = pd.to_numeric(df_dag["Raw Value"], errors="coerce")
     aanwezig = df_dag["Raw Value"].notna().sum()
     percentage = round((aanwezig / 144) * 100, 1)
     status = "goed" if percentage >= 75 else "slecht"
@@ -207,7 +213,6 @@ st.markdown("**Legenda:** 🟩 Geschikte dag   |   🟥 Ongeschikte dag**")
 # ---------------------------------------------------------
 st.subheader("Geregistreerde Windrichtingmetingen & Datakwaliteit")
 
-df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 df_dag = df[df["Timestamp"].dt.date == gekozen_dag].copy()
 df_dag = df_dag[df_dag["Raw Value"].notna()]
 
