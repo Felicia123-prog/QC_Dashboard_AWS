@@ -3,12 +3,11 @@ import os
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
-import plotly.express as px
 
 st.title("AWS QC Dashboard – Windrichting (Raw Value)")
 
 # 📁 Detecteer stations
-data_path = "data"
+data_path = "data/processed"
 stations = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, d))]
 
 station = st.selectbox("Kies een station", stations)
@@ -219,7 +218,6 @@ st.markdown("**Legenda:** 🟩 Geschikte dag (≥75% compleet)   |   🟥 Ongesc
 # ---------------------------------------------------------
 st.subheader("Geregistreerde Windrichtingmetingen & Datakwaliteit")
 
-# GEEN nieuwe Timestamp-opbouw hier!
 df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 
 df_dag = df[df["Timestamp"].dt.date == gekozen_dag].copy()
@@ -264,10 +262,8 @@ st.markdown("""
 """)
 
 # ---------------------------------------------------------
-# 8. PREMIUM WINDROOS – DAG (ZONDER DOMINANTE PIJL)
+# 8. PREMIUM WINDROOS – DAG
 # ---------------------------------------------------------
-df_dag["Raw Value"] = df_dag["Raw Value"].round(0).astype("Int64")
-
 df_dag["Sector"] = (df_dag["Raw Value"] // 10) * 10
 freq_dag = df_dag.groupby("Sector").size().reset_index(name="Count")
 
@@ -312,28 +308,6 @@ fig_d.update_layout(
 )
 
 st.plotly_chart(fig_d, use_container_width=True)
-
-st.markdown("""
-### Uitleg Windroos
-De windroos toont **hoe vaak** de wind uit elke richting heeft gewaaid.
-
-- **Blauwe balken**: geven de **frequentie** weer.  
-  - Hoe **langer** de balk, hoe **vaker** de wind uit die richting kwam.  
-  - Hoe **donkerder** de kleur, hoe **hoger** de frequentie.
-
-- De cirkel is verdeeld in **sectoren van 10°** (0°, 10°, 20°, … 350°).
-
-- De labels **N, NE, E, SE, S, SW, W, NW** geven de **windrichtingen** aan.
-
-- De windroos gebruikt **alle individuele metingen** van de dag.  
-  Er wordt **geen gemiddelde windrichting** berekend, omdat dat meteorologisch niet correct is.
-""")
-
-st.markdown(f"""
-### Dagelijkse Windrichting Samenvatting
-- **Hoogste frequentie:** {max_count_dag} metingen  
-- **Aantal sectoren met wind:** {freq_dag[freq_dag['Count'] > 0].shape[0]}  
-""")
 
 # ---------------------------------------------------------
 # 9. QC SAMENVATTING – DAG
@@ -414,7 +388,7 @@ if not df_maand.empty:
     st.markdown(f"### Maandconclusie\n{maand_conclusie}")
 
 # ---------------------------------------------------------
-# 12. PREMIUM WINDROOS – MAAND (ZONDER DOMINANTE PIJL)
+# 12. PREMIUM WINDROOS – MAAND
 # ---------------------------------------------------------
 st.subheader("Maandelijkse Windroos")
 
@@ -467,22 +441,6 @@ else:
     )
 
     st.plotly_chart(fig_m, use_container_width=True)
-
-    st.markdown("""
-    ### Uitleg Windroos
-    De windroos toont **hoe vaak** de wind uit elke richting heeft gewaaid.
-
-    - **Blauwe balken**: geven de **frequentie** weer.  
-      - Hoe **langer** de balk, hoe **vaker** de wind uit die richting kwam.  
-      - Hoe **donkerder** de kleur, hoe **hoger** de frequentie.
-
-    - De cirkel is verdeeld in **sectoren van 10°** (0°, 10°, 20°, … 350°).
-
-    - De labels **N, NE, E, SE, S, SW, W, NW** geven de **windrichtingen** aan.
-
-    - De windroos gebruikt **alle individuele metingen** van de maand.  
-      Er wordt **geen gemiddelde windrichting** berekend, omdat dat meteorologisch niet correct is.
-    """)
 
     st.markdown(f"""
     ### Maandelijkse Windrichting Samenvatting
