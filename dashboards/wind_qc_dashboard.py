@@ -24,7 +24,12 @@ if not os.path.exists(file_path):
 df = pd.read_excel(file_path)
 
 # ---------------------------------------------------------
-# ⭐ RAW VALUE + CLEANED VALUE FIX
+# ⭐ 1. Kolomnamen opschonen (BELANGRIJK!)
+# ---------------------------------------------------------
+df.columns = df.columns.str.strip()
+
+# ---------------------------------------------------------
+# ⭐ 2. RAW VALUE + CLEANED VALUE FIX
 # ---------------------------------------------------------
 df["Raw Value"] = pd.to_numeric(df["Raw Value"], errors="coerce")
 df["Cleaned Value"] = pd.to_numeric(df["Cleaned Value"], errors="coerce")
@@ -32,8 +37,12 @@ df["Cleaned Value"] = pd.to_numeric(df["Cleaned Value"], errors="coerce")
 # Als Raw ontbreekt maar Cleaned bestaat → gebruik Cleaned
 df["Raw Value"] = df["Raw Value"].fillna(df["Cleaned Value"])
 
-# Combineer Dag + Tijd
+# ---------------------------------------------------------
+# ⭐ 3. TIMESTAMP – GEEN AFRONDING, GEEN FLOOR, GEEN ROUND
+# ---------------------------------------------------------
 df["Timestamp"] = pd.to_datetime(df["Dag"].astype(str) + " " + df["Tijd"].astype(str))
+
+# Data is al perfect 10-minuten → NIETS aanpassen
 df = df.sort_values("Timestamp")
 
 # 📅 Dagselectie
@@ -45,11 +54,9 @@ df_dag = df[df["Timestamp"].dt.date == gekozen_dag]
 st.subheader(f"QC Rapport – {gekozen_dag}")
 
 # ---------------------------------------------------------
-# 1. CUSTOM BLOCKS TIMELINE – MISSING DETECTIE
+# ⭐ 4. MISSING BLOCKS – NU 100% CORRECT
 # ---------------------------------------------------------
 st.subheader("Ontbrekende metingen voor de dag!")
-
-df_dag = df[df["Timestamp"].dt.date == gekozen_dag].copy()
 
 start = pd.to_datetime(str(gekozen_dag) + " 00:00:00")
 expected_times = pd.date_range(start=start, periods=144, freq="10min")
@@ -120,7 +127,7 @@ st.plotly_chart(fig, use_container_width=True)
 st.markdown("**Legenda:** 🟩 Ontvangen meting   |   🟥 Ontbrekende meting**")
 
 # ---------------------------------------------------------
-# 2. QC SAMENVATTING – DAG
+# ⭐ 5. QC SAMENVATTING – DAG
 # ---------------------------------------------------------
 st.subheader("QC")
 
@@ -152,7 +159,7 @@ qc_html = f"""
 st.markdown(qc_html, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 3. MAANDOVERZICHT QC
+# ⭐ 6. MAANDOVERZICHT QC
 # ---------------------------------------------------------
 st.subheader("Maandelijkse QC – Windrichting")
 
@@ -209,7 +216,7 @@ st.plotly_chart(fig2, use_container_width=True)
 st.markdown("**Legenda:** 🟩 Geschikte dag   |   🟥 Ongeschikte dag**")
 
 # ---------------------------------------------------------
-# 4. GEREGISTREERDE METINGEN & QC
+# ⭐ 7. GEREGISTREERDE METINGEN & QC
 # ---------------------------------------------------------
 st.subheader("Geregistreerde Windrichtingmetingen & Datakwaliteit")
 
@@ -244,7 +251,7 @@ st.markdown("""
 """)
 
 # ---------------------------------------------------------
-# 5. WINDROOS – DAG
+# ⭐ 8. WINDROOS – DAG
 # ---------------------------------------------------------
 st.subheader("Windroos – Dag")
 
@@ -279,7 +286,7 @@ fig_w.update_layout(
 st.plotly_chart(fig_w, use_container_width=True)
 
 # ---------------------------------------------------------
-# 6. DAGCONCLUSIE
+# ⭐ 9. DAGCONCLUSIE
 # ---------------------------------------------------------
 outliers = (df_dag["QC_Flag"] == "OUT_OF_RANGE").sum()
 
@@ -289,7 +296,7 @@ else:
     st.markdown("### Dagconclusie\n✔️ Alle waarden geldig.")
 
 # ---------------------------------------------------------
-# 7. MAANDSTATISTIEKEN
+# ⭐ 10. MAANDSTATISTIEKEN
 # ---------------------------------------------------------
 st.subheader("Maandstatistieken – Windrichting")
 
@@ -313,7 +320,7 @@ else:
     st.markdown("### Maandconclusie\n✔️ Alle waarden geldig.")
 
 # ---------------------------------------------------------
-# 8. WINDROOS – MAAND
+# ⭐ 11. WINDROOS – MAAND
 # ---------------------------------------------------------
 st.subheader("Maandelijkse Windroos")
 
