@@ -7,7 +7,7 @@ import plotly.express as px
 st.title("AWS QC Dashboard – Temperatuur (Raw Value)")
 
 # 📁 Detecteer stations
-data_path = "data"
+data_path = "data/processed"
 stations = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, d))]
 
 station = st.selectbox("Kies een station", stations)
@@ -443,7 +443,4 @@ if not df_maand.empty:
         if problemen:
             maand_conclusie = (
                 "⚠️ De data bevat aandachtspunten. Gebruik de data alleen na filtering en controle.\n\n"
-                + "\n".join(f"- {p}" for p in problemen)
-            )
-        else:
-            maand_conclusie
+                + "\
